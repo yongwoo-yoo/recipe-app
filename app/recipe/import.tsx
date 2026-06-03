@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Image, Pressable } from 'react-native';
 import { Text, TextInput, Button, ActivityIndicator, Divider } from 'react-native-paper';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useRecipeStore } from '@/store/recipeStore';
@@ -125,6 +125,13 @@ export default function ImportScreen() {
   if (extractedData) {
     return (
       <View style={{ flex: 1 }}>
+        <Stack.Screen options={{
+          headerLeft: () => (
+            <Pressable onPress={() => setExtractedData(null)} style={{ paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 16, color: appleColors.accent }}>← 다시 추출</Text>
+            </Pressable>
+          ),
+        }} />
         <View style={styles.previewHeader}>
           <Text variant="bodyMedium" style={styles.previewDesc}>
             AI가 추출한 레시피를 확인하고 수정 후 저장하세요.
