@@ -7,8 +7,14 @@ import type { SettingsState } from '@/types';
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
+      selectedProvider: 'anthropic',
       anthropicApiKey: '',
-      setAnthropicApiKey: (key: string) => set({ anthropicApiKey: key }),
+      geminiApiKey: '',
+      openaiApiKey: '',
+      setSelectedProvider: (p) => set({ selectedProvider: p }),
+      setAnthropicApiKey: (key) => set({ anthropicApiKey: key }),
+      setGeminiApiKey: (key) => set({ geminiApiKey: key }),
+      setOpenaiApiKey: (key) => set({ openaiApiKey: key }),
     }),
     {
       name: STORAGE_KEYS.SETTINGS,

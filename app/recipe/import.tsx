@@ -6,7 +6,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useRecipeStore } from '@/store/recipeStore';
 import { ImportMethodSheet, type ImportMethod } from '@/components/import/ImportMethodSheet';
-import { extractRecipeWithClaude } from '@/utils/claudeExtract';
+import { extractRecipe } from '@/utils/aiExtract';
+import { appleColors } from '@/constants/theme';
 import { fetchYouTubeContent } from '@/utils/fetchYouTubeTranscript';
 import { RecipeForm } from '@/components/recipe/RecipeForm';
 import type { RecipeFormData } from '@/types';
@@ -25,7 +26,11 @@ export default function ImportScreen() {
   const [error, setError] = useState('');
   const [extractedData, setExtractedData] = useState<RecipeFormData | null>(null);
 
-  const apiKey = useSettingsStore((s) => s.anthropicApiKey);
+  const selectedProvider = useSettingsStore((s) => s.selectedProvider);
+  const anthropicApiKey = useSettingsStore((s) => s.anthropicApiKey);
+  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
+  const openaiApiKey = useSettingsStore((s) => s.openaiApiKey);
+  const apiKey = selectedProvider === 'gemini' ? geminiApiKey : selectedProvider === 'openai' ? openaiApiKey : anthropicApiKey;
   const addRecipe = useRecipeStore((s) => s.addRecipe);
 
   const pickImage = async () => {
@@ -60,7 +65,8 @@ export default function ImportScreen() {
 
   const handleExtract = async () => {
     if (!apiKey) {
-      setError('설정에서 Anthropic API 키를 먼저 입력해주세요.');
+      const providerName = selectedProvider === 'gemini' ? 'Gemini' : selectedProvider === 'openai' ? 'OpenAI' : 'Anthropic';
+      setError(`설정에서 ${providerName} API 키를 먼저 입력해주세요.`);
       return;
     }
 
@@ -97,7 +103,7 @@ export default function ImportScreen() {
         }
       }
 
-      const result = await extractRecipeWithClaude(apiKey, content, base64, mime);
+      const result = await extractRecipe(selectedProvider, apiKey, content, base64, mime);
 
       // Add IDs to ingredients and steps
       result.ingredients = result.ingredients.map((i) => ({ ...i, id: i.id || genId() }));
@@ -137,7 +143,12 @@ export default function ImportScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text variant="titleMedium" style={styles.sectionTitle}>방법 선택</Text>
+        <View style={styles.titleRow}>
+          <Text variant="titleMedium" style={styles.sectionTitle}>방법 선택</Text>
+          <Text style={styles.providerBadge}>
+            {selectedProvider === 'gemini' ? 'Gemini' : selectedProvider === 'openai' ? 'ChatGPT' : 'Claude'}
+          </Text>
+        </View>
         <ImportMethodSheet selected={method} onSelect={(m) => { setMethod(m); setInputText(''); setImageUri(null); setImageBase64(null); }} />
 
         <Divider style={styles.divider} />
@@ -218,7 +229,17 @@ export default function ImportScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 16, gap: 14, paddingBottom: 40 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontWeight: '700' },
+  providerBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: appleColors.blue,
+    backgroundColor: appleColors.blue + '18',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
   divider: { marginVertical: 4 },
   imageSection: { gap: 10 },
   preview: { width: '100%', height: 200, borderRadius: 10, backgroundColor: '#f0f0f0' },

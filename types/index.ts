@@ -85,7 +85,15 @@ export interface UIState {
   setSearchQuery: (q: string) => void;
 }
 
+export type AIProvider = 'anthropic' | 'gemini' | 'openai';
+
 export interface SettingsState {
+  selectedProvider: AIProvider;
   anthropicApiKey: string;
+  geminiApiKey: string;
+  openaiApiKey: string;
+  setSelectedProvider: (p: AIProvider) => void;
   setAnthropicApiKey: (key: string) => void;
+  setGeminiApiKey: (key: string) => void;
+  setOpenaiApiKey: (key: string) => void;
 }
