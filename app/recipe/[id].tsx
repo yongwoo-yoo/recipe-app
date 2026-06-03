@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { useRecipeStore } from '@/store/recipeStore';
 import { StepTimer } from '@/components/recipe/StepTimer';
+import { TotalTimer } from '@/components/timer/TotalTimer';
 import { getCategoryById } from '@/constants/categories';
 import { appleColors } from '@/constants/theme';
 
@@ -162,6 +163,11 @@ export default function RecipeDetailScreen() {
 
         </View>
 
+        {/* ── 전체 타이머 ── */}
+        {recipe.steps.some((s) => s.timer) && (
+          <TotalTimer recipe={recipe} />
+        )}
+
         {/* ── 편집 / 삭제 액션 ── */}
         <View style={styles.actionBar}>
           <Pressable
@@ -186,7 +192,7 @@ export default function RecipeDetailScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container: { paddingBottom: 60 },
+  container: { paddingBottom: 80 },
 
   // Hero
   hero: {
@@ -250,7 +256,7 @@ const styles = StyleSheet.create({
   // Sections
   section: {
     marginHorizontal: 16,
-    marginTop: 14,
+    marginTop: 16,
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1,
@@ -266,8 +272,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase' as const,
     letterSpacing: 1.2,
     color: appleColors.gray3,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingTop: 18,
     paddingBottom: 2,
   },
   panelH: {
@@ -275,8 +281,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.5,
     color: appleColors.gray1,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
   sectionTitle: {
     fontSize: 11,
@@ -293,8 +299,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
   },
   checkbox: {
     width: 22,
@@ -312,12 +318,12 @@ const styles = StyleSheet.create({
   strikethrough: { textDecorationLine: 'line-through', color: appleColors.gray3 },
 
   // Steps
-  stepsSection: { marginHorizontal: 16, marginTop: 14, gap: 10, flex: 1 },
+  stepsSection: { marginHorizontal: 16, marginTop: 16, gap: 10, flex: 1 },
   stepCard: {
     borderRadius: 18,
     flexDirection: 'row',
     gap: 14,
-    padding: 16,
+    padding: 18,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 1px 6px rgba(34,31,26,0.06)' } as any
       : { shadowColor: '#221F1A', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 }),
@@ -334,14 +340,14 @@ const styles = StyleSheet.create({
   stepText: { fontSize: 15, lineHeight: 22 },
 
   // Notes
-  notes: { fontSize: 15, lineHeight: 22, padding: 16, paddingTop: 0 },
+  notes: { fontSize: 15, lineHeight: 22, padding: 20, paddingTop: 4 },
 
   // Action bar
   actionBar: {
     flexDirection: 'row',
     gap: 12,
     marginHorizontal: 16,
-    marginTop: 24,
+    marginTop: 20,
     marginBottom: 16,
   },
   actionBtn: {

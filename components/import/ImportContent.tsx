@@ -40,6 +40,7 @@ export function ImportContent({ onClose }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [extractedData, setExtractedData] = useState<RecipeFormData | null>(null);
+  const [fetchedTranscript, setFetchedTranscript] = useState<string | null>(null);
 
   const selectedProvider = useSettingsStore((s) => s.selectedProvider ?? 'anthropic');
   const anthropicApiKey = useSettingsStore((s) => s.anthropicApiKey ?? '');
@@ -98,7 +99,11 @@ export function ImportContent({ onClose }: Props) {
 
       if (method === 'youtube') {
         if (!inputText.trim()) throw new Error('YouTube URL을 입력해주세요.');
-        content = await fetchYouTubeContent(inputText.trim());
+        // 자막 가져온 뒤 텍스트로 보여줘서 확인/보완 후 추출
+        const fetched = await fetchYouTubeContent(inputText.trim());
+        setFetchedTranscript(fetched);
+        setIsLoading(false);
+        return;
       } else if (method === 'image') {
         if (!imageBase64) throw new Error('사진을 선택해주세요.');
         base64 = imageBase64;
@@ -122,6 +127,15 @@ export function ImportContent({ onClose }: Props) {
       const result = await extractRecipe(selectedProvider, apiKey, content, base64, mime);
       result.ingredients = result.ingredients.map((i) => ({ ...i, id: i.id || genId() }));
       result.steps = result.steps.map((s) => ({ ...s, id: s.id || genId() }));
+      // 출처 정보 추가
+      const now = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+      const sourceNote =
+        method === 'url' ? `출처: ${inputText.trim()}` :
+        method === 'image' ? `사진에서 추가 · ${now}` :
+        `텍스트로 추가 · ${now}`;
+      result.description = result.description
+        ? `${result.description}\n\n${sourceNote}`
+        : sourceNote;
       setExtractedData(result);
     } catch (e: any) {
       setError(e.message ?? '알 수 없는 오류가 발생했습니다.');
@@ -134,6 +148,58 @@ export function ImportContent({ onClose }: Props) {
     addRecipe(data);
     onClose();
   };
+
+  // ── 자막 미리보기 화면 (YouTube 전용) ──────────────────────
+  if (fetchedTranscript !== null) {
+    return (
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={styles.transcriptBanner}>
+          <Text style={styles.transcriptBannerTitle}>✅ 자막을 가져왔습니다</Text>
+          <Text style={styles.transcriptBannerDesc}>내용을 확인하고 필요하면 수정한 뒤 AI 추출을 눌러주세요.</Text>
+        </View>
+        <TextInput
+          value={fetchedTranscript}
+          onChangeText={setFetchedTranscript}
+          mode="outlined"
+          multiline
+          numberOfLines={12}
+          outlineStyle={styles.inputOutline}
+          style={[styles.textarea, { minHeight: 220 }]}
+        />
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Pressable
+          onPress={async () => {
+            if (!apiKey) { setError(`설정에서 ${providerLabel} API 키를 먼저 저장해주세요.`); return; }
+            setError(''); setIsLoading(true);
+            try {
+              const result = await extractRecipe(selectedProvider, apiKey, fetchedTranscript);
+              result.ingredients = result.ingredients.map((i) => ({ ...i, id: i.id || genId() }));
+              result.steps = result.steps.map((s) => ({ ...s, id: s.id || genId() }));
+              const sourceNote = `출처: ${inputText.trim()}`;
+              result.description = result.description
+                ? `${result.description}\n\n${sourceNote}`
+                : sourceNote;
+              setExtractedData(result);
+              setFetchedTranscript(null);
+            } catch (e: any) {
+              setError(e.message ?? '오류가 발생했습니다.');
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+          disabled={isLoading}
+          style={({ pressed }) => [styles.aiBtnWrap, pressed && { opacity: 0.88 }]}
+        >
+          <LinearGradient colors={['#E2574C', '#D9683F', '#E0A02E']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.aiBtn}>
+            {isLoading ? <ActivityIndicator color="#fff" size={18} /> : <Text style={styles.aiBtnText}>✦  AI로 레시피 추출</Text>}
+          </LinearGradient>
+        </Pressable>
+        <Pressable onPress={() => setFetchedTranscript(null)} style={{ alignItems: 'center', paddingVertical: 8 }}>
+          <Text style={{ fontSize: 13, color: appleColors.gray3 }}>← URL 입력으로 돌아가기</Text>
+        </Pressable>
+      </ScrollView>
+    );
+  }
 
   // ── 추출 결과 화면 ──────────────────────────────────────────
   if (extractedData) {
@@ -308,6 +374,17 @@ const styles = StyleSheet.create({
   },
   aiBtnText: { fontSize: 16, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
   hint: { fontSize: 12, color: appleColors.gray3, textAlign: 'center', lineHeight: 18 },
+
+  transcriptBanner: {
+    backgroundColor: '#10A37F18',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#10A37F40',
+    gap: 4,
+  },
+  transcriptBannerTitle: { fontSize: 14, fontWeight: '700', color: '#10A37F' },
+  transcriptBannerDesc: { fontSize: 12, color: appleColors.gray2, lineHeight: 17 },
 
   previewBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

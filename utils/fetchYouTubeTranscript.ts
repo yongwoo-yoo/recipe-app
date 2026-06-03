@@ -1,51 +1,120 @@
 import { extractYouTubeId } from './extractYouTubeId';
 
-interface CaptionTrack {
-  baseUrl: string;
-  languageCode: string;
-  kind?: string;
+function formatTime(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-const YT_HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-  'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8',
-  // YouTube 동의 쿠키 — 지역 차단 우회
-  'Cookie': 'CONSENT=YES+42; SOCS=CAI;',
-};
-
-function decodeEntities(str: string): string {
+function decodeHtml(str: string): string {
   return str
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&#39;/g, "'")
     .replace(/&quot;/g, '"')
+    .replace(/<[^>]+>/g, '') // HTML 태그 제거
     .replace(/\n/g, ' ');
 }
 
-function parseCaptionTracks(html: string): CaptionTrack[] {
-  const idx = html.indexOf('"captionTracks"');
-  if (idx === -1) return [];
-  const start = html.indexOf('[', idx);
-  if (start === -1) return [];
-  let depth = 0, end = start;
-  for (let i = start; i < html.length; i++) {
-    if (html[i] === '[' || html[i] === '{') depth++;
-    else if (html[i] === ']' || html[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
-  }
-  try {
-    return JSON.parse(html.slice(start, end + 1).replace(/\\u0026/g, '&'));
-  } catch { return []; }
+// ── STEP 1: 페이지에서 InnerTube API 키 추출 ─────────────────
+async function getInnerTubeApiKey(videoId: string): Promise<string> {
+  const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+    headers: { 'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8' },
+  });
+  const html = await res.text();
+  const match = html.match(/"INNERTUBE_API_KEY"\s*:\s*"([a-zA-Z0-9_-]+)"/);
+  if (!match) throw new Error('InnerTube API 키를 찾을 수 없습니다.');
+  return match[1];
 }
 
-function pickTrack(tracks: CaptionTrack[]): CaptionTrack | null {
+// ── STEP 2: InnerTube player API로 자막 트랙 목록 획득 ────────
+// youtube-transcript-api와 동일: ANDROID 클라이언트 사용
+async function getCaptionTracks(videoId: string, apiKey: string): Promise<{
+  captionTracks: Array<{ baseUrl: string; languageCode: string; kind?: string; name?: string }>;
+}> {
+  const res = await fetch(
+    `https://www.youtube.com/youtubei/v1/player?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8',
+      },
+      body: JSON.stringify({
+        context: {
+          client: {
+            clientName: 'ANDROID',
+            clientVersion: '20.10.38',
+            hl: 'ko',
+            gl: 'KR',
+          },
+        },
+        videoId,
+      }),
+    }
+  );
+
+  if (res.status === 429) throw new Error('YouTube 요청 제한에 걸렸습니다. 잠시 후 다시 시도해주세요.');
+  if (!res.ok) throw new Error(`YouTube API 오류: ${res.status}`);
+
+  const data = await res.json();
+
+  // 에러 상태 확인
+  const status = data?.playabilityStatus?.status;
+  if (status && status !== 'OK') {
+    const reason = data?.playabilityStatus?.reason ?? '';
+    if (reason.includes('bot')) throw new Error('YouTube가 봇으로 감지했습니다.');
+    if (reason.includes('inappropriate') || reason.includes('age')) throw new Error('연령 제한 영상입니다.');
+    if (status === 'ERROR') throw new Error('영상을 찾을 수 없습니다.');
+  }
+
+  const captions = data?.captions?.playerCaptionsTracklistRenderer;
+  const captionTracks = (captions?.captionTracks ?? []).map((t: any) => ({
+    baseUrl: t.baseUrl,
+    languageCode: t.languageCode,
+    kind: t.kind,
+    name: t.name?.runs?.[0]?.text ?? t.languageCode,
+  }));
+
+  return { captionTracks };
+}
+
+// ── STEP 3: 자막 다운로드 및 파싱 ───────────────────────────
+// ANDROID 클라이언트 URL은 fmt=srv3 → json3으로 교체해서 요청
+async function downloadTranscript(baseUrl: string): Promise<string> {
+  const url = baseUrl.replace('fmt=srv3', 'fmt=json3');
+  const res = await fetch(url, {
+    headers: { 'Accept-Language': 'ko-KR,ko;q=0.9' },
+  });
+  if (!res.ok) throw new Error(`자막 다운로드 실패: ${res.status}`);
+
+  const data = await res.json();
+  const events: any[] = data.events ?? [];
+  const lines: string[] = [];
+
+  for (const e of events) {
+    if (!e.segs) continue;
+    const text = e.segs
+      .map((s: any) => decodeHtml((s.utf8 || '').replace(/\n/g, ' ')))
+      .join('')
+      .trim();
+    if (!text) continue;
+    const ts = formatTime((e.tStartMs ?? 0) / 1000);
+    lines.push(`${ts} ${text}`);
+  }
+
+  return lines.join('\n');
+}
+
+// ── 언어 우선순위 선택 ────────────────────────────────────────
+function pickBestTrack(tracks: Array<{ baseUrl: string; languageCode: string; kind?: string }>) {
   const order = [
-    (t: CaptionTrack) => t.languageCode === 'ko' && t.kind !== 'asr',
-    (t: CaptionTrack) => t.languageCode === 'ko',
-    (t: CaptionTrack) => t.languageCode?.startsWith('ko'),
-    (t: CaptionTrack) => t.languageCode === 'en' && t.kind !== 'asr',
-    (t: CaptionTrack) => t.languageCode === 'en',
+    (t: any) => t.languageCode === 'ko' && t.kind !== 'asr',  // 한국어 수동
+    (t: any) => t.languageCode === 'ko',                        // 한국어 (자동생성 포함)
+    (t: any) => t.languageCode?.startsWith('ko'),
+    (t: any) => t.languageCode === 'en' && t.kind !== 'asr',  // 영어 수동
+    (t: any) => t.languageCode === 'en',
     () => true,
   ];
   for (const fn of order) {
@@ -55,76 +124,47 @@ function pickTrack(tracks: CaptionTrack[]): CaptionTrack | null {
   return null;
 }
 
-async function transcriptFromTrack(track: CaptionTrack): Promise<string> {
-  let url = track.baseUrl;
-  if (!url.startsWith('http')) url = 'https://www.youtube.com' + url;
-
-  // JSON3 형식 요청
-  const jsonUrl = url + (url.includes('?') ? '&' : '?') + 'fmt=json3';
-  const res = await fetch(jsonUrl, { headers: YT_HEADERS });
-
-  if (res.ok) {
-    const text = await res.text();
-    if (text.trim().startsWith('{')) {
-      const data = JSON.parse(text);
-      const segs = (data.events ?? [])
-        .flatMap((e: any) => e.segs ?? [])
-        .map((s: any) => decodeEntities((s.utf8 || '').replace(/\n/g, ' ')))
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (segs) return segs;
-    }
-  }
-
-  // XML 폴백
-  const xmlRes = await fetch(url, { headers: YT_HEADERS });
-  const xml = await xmlRes.text();
-  const texts = xml.match(/<text[^>]*>([^<]*)<\/text>/g) ?? [];
-  return texts
-    .map(t => decodeEntities(t.replace(/<[^>]+>/g, '')))
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+// ── oEmbed 제목/채널 ─────────────────────────────────────────
+async function fetchOEmbed(videoId: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+    );
+    if (!res.ok) return '';
+    const d = await res.json();
+    return `제목: ${d.title}\n채널: ${d.author_name}`;
+  } catch { return ''; }
 }
 
-async function fetchPageTranscript(videoId: string): Promise<{ title: string; transcript: string }> {
-  const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, { headers: YT_HEADERS });
-  if (!res.ok) throw new Error('YouTube 페이지를 불러올 수 없습니다.');
-  const html = await res.text();
-
-  // 제목
-  const titleMatch = html.match(/"title":"([^"]+)"/) || html.match(/<title>([^<]+)<\/title>/);
-  const title = titleMatch ? titleMatch[1].replace(/\s*[-|–]\s*YouTube\s*$/, '').trim() : '';
-
-  const tracks = parseCaptionTracks(html);
-  if (!tracks.length) return { title, transcript: '' };
-
-  const track = pickTrack(tracks);
-  if (!track) return { title, transcript: '' };
-
-  const transcript = await transcriptFromTrack(track);
-  return { title, transcript };
-}
-
+// ── 메인 진입점 ──────────────────────────────────────────────
 export async function fetchYouTubeContent(youtubeUrl: string): Promise<string> {
   const videoId = extractYouTubeId(youtubeUrl);
   if (!videoId) throw new Error('유효하지 않은 YouTube URL입니다.');
 
-  const { title, transcript } = await fetchPageTranscript(videoId);
+  // STEP 1: API 키
+  const apiKey = await getInnerTubeApiKey(videoId);
 
-  if (!transcript) {
-    const msg = title
-      ? `"${title}" 영상에서 자막을 가져올 수 없습니다.\n자막(CC)이 켜져 있는 영상인지 확인해주세요.`
-      : '자막을 가져올 수 없습니다. 자막(CC)이 있는 영상을 사용해주세요.';
-    throw new Error(msg);
+  // STEP 2: 자막 트랙 목록
+  const { captionTracks } = await getCaptionTracks(videoId, apiKey);
+
+  if (!captionTracks.length) {
+    throw new Error(
+      '자막이 없는 영상입니다.\nYouTube에서 스크립트를 직접 복사해서 "텍스트" 탭에 붙여넣어 주세요.'
+    );
   }
 
-  const langNote = transcript.length > 100 ? '' : '';
-  return [
-    title ? `제목: ${title}` : '',
-    '',
-    '[자막 전문]',
-    transcript,
-  ].filter((l, i) => i !== 1 || title).join('\n');
+  // STEP 3: 최적 트랙 선택 & 다운로드
+  const track = pickBestTrack(captionTracks);
+  if (!track) throw new Error('적합한 자막을 찾을 수 없습니다.');
+
+  const transcript = await downloadTranscript(track.baseUrl);
+
+  if (!transcript) {
+    throw new Error(
+      '자막 내용을 가져올 수 없습니다.\n직접 복사해서 "텍스트" 탭에 붙여넣어 주세요.'
+    );
+  }
+
+  const oembed = await fetchOEmbed(videoId);
+  return [oembed, '\n[자막]\n' + transcript].filter(Boolean).join('\n');
 }
