@@ -5,6 +5,7 @@ import { Stack, router } from 'expo-router';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTimer } from '@/hooks/useTimer';
 import { lightTheme, appleColors } from '@/constants/theme';
 
@@ -55,7 +56,10 @@ function RootLayoutInner() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <PaperProvider theme={lightTheme}>
+      <PaperProvider
+        theme={lightTheme}
+        settings={{ icon: (props: any) => <MaterialCommunityIcons {...props} /> }}
+      >
         <RootLayoutInner />
       </PaperProvider>
     </SafeAreaProvider>
