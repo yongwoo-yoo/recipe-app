@@ -17,6 +17,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "package": "com.yongwoo.recipeapp",
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -37,6 +38,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f14b2eef-7db3-40cc-b576-d24dc69a8d15"
+      }
+    },
+    "owner": "yongwooyu"
   }
 }

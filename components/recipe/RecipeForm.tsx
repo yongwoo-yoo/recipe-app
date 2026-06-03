@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { ScrollView, StyleSheet, View, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { TextInput, Button, Text, Menu, Divider } from 'react-native-paper';
-import { CATEGORIES } from '@/constants/categories';
+import { CATEGORIES, BREW_TOOLS } from '@/constants/categories';
+import { appleColors } from '@/constants/theme';
 import { IngredientList } from './IngredientList';
 import { StepList } from './StepList';
 import type { RecipeFormData, CategoryId, Ingredient, RecipeStep } from '@/types';
@@ -18,6 +19,7 @@ const DEFAULT_FORM: RecipeFormData = {
   ingredients: [],
   steps: [],
   notes: '',
+  brewingTool: undefined,
 };
 
 interface Props {
@@ -57,7 +59,7 @@ export function RecipeForm({ initialData, onSubmit, submitLabel = '저장', isLo
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <TextInput
           label="레시피 이름 *"
           value={form.title}
@@ -88,6 +90,37 @@ export function RecipeForm({ initialData, onSubmit, submitLabel = '저장', isLo
             />
           ))}
         </Menu>
+
+        {/* ── 브루잉 도구 (핸드드립 전용) ── */}
+        {form.categoryId === 'hand-drip' && (
+          <View style={styles.brewSection}>
+            <Text style={styles.brewLabel}>브루잉 도구</Text>
+            <View style={styles.brewChips}>
+              {BREW_TOOLS.map((tool) => {
+                const isActive = form.brewingTool === tool;
+                return (
+                  <Pressable
+                    key={tool}
+                    onPress={() => set({ brewingTool: isActive ? undefined : tool })}
+                    style={[styles.brewChip, isActive && styles.brewChipActive]}
+                  >
+                    <Text style={[styles.brewChipText, isActive && styles.brewChipTextActive]}>
+                      {tool}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <TextInput
+              label="직접 입력 (선택)"
+              value={form.brewingTool ?? ''}
+              onChangeText={(v) => set({ brewingTool: v || undefined })}
+              mode="outlined"
+              placeholder="예: 고노, 오리가미…"
+              dense
+            />
+          </View>
+        )}
 
         <TextInput
           label="설명 (선택)"
@@ -153,4 +186,33 @@ const styles = StyleSheet.create({
   divider: { marginVertical: 8 },
   error: { color: '#B00020', fontSize: 12, marginTop: -8 },
   submitBtn: { marginTop: 8 },
+
+  brewSection: {
+    backgroundColor: appleColors.surface2,
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: appleColors.gray5,
+  },
+  brewLabel: {
+    fontSize: 12, fontWeight: '700',
+    color: appleColors.gray2,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  brewChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  brewChip: {
+    paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: appleColors.gray4,
+    backgroundColor: appleColors.white,
+  },
+  brewChipActive: {
+    backgroundColor: appleColors.gray1,
+    borderColor: appleColors.gray1,
+  },
+  brewChipText: { fontSize: 13, fontWeight: '600', color: appleColors.gray2 },
+  brewChipTextActive: { color: '#fff' },
 });

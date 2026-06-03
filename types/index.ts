@@ -43,6 +43,7 @@ export interface Recipe {
   steps: RecipeStep[];
   notes?: string;
   imageUri?: string;
+  brewingTool?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,6 +56,7 @@ export interface RecipeFormData {
   ingredients: Ingredient[];
   steps: RecipeStep[];
   notes: string;
+  brewingTool?: string;
 }
 
 export interface RecipeState {

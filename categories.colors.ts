@@ -11,15 +11,15 @@ import type { Category, CategoryId } from '@/types';
  * ─────────────────────────────────────────────────────────────────────────
  */
 export const CATEGORY_COLORS: Record<CategoryId, string> = {
-  korean:      '#E2574C', //  #FF6B6B → 톤 다운
-  western:     '#2BB6A8', //  #4ECDC4
-  japanese:    '#E0A02E', //  #F7B731
-  chinese:     '#D9683F', //  #e17055
-  dessert:     '#8B7CE8', //  #A29BFE
-  espresso:    '#6C5CE7', //  유지
-  'hand-drip': '#10A37F', //  #00B894
-  'cold-brew': '#4F9DF0', //  #74B9FF
-  other:       '#9B9488', //  #B2BEC3 (warm gray)
+  korean:      '#E2574C',
+  western:     '#2BB6A8',
+  japanese:    '#E0A02E',
+  chinese:     '#D9683F',
+  dessert:     '#8B7CE8',
+  espresso:    '#6C5CE7',
+  'hand-drip': '#10A37F',
+  'cold-brew': '#4F9DF0',
+  other:       '#9B9488',
 };
 
 // 참고용 — 교체 후 CATEGORIES 전체 모습

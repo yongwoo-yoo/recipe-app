@@ -1,4 +1,4 @@
-import { MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
+import { MD3LightTheme, MD3DarkTheme, configureFonts } from 'react-native-paper';
 
 export const appleColors = {
   accent: '#E2574C',
@@ -22,8 +22,11 @@ export const appleColors = {
   purple: '#8B7CE8',
 };
 
+const fonts = configureFonts({ config: { fontFamily: 'Pretendard' } });
+
 export const lightTheme = {
   ...MD3LightTheme,
+  fonts,
   roundness: 5,
   colors: {
     ...MD3LightTheme.colors,
@@ -44,11 +47,17 @@ export const lightTheme = {
     outline: appleColors.gray4,
     outlineVariant: appleColors.gray5,
     error: appleColors.red,
+    elevation: {
+      ...MD3LightTheme.colors.elevation,
+      level1: appleColors.white,
+      level2: '#FBF7F0',
+    },
   },
 };
 
 export const darkTheme = {
   ...MD3DarkTheme,
+  fonts,
   roundness: 5,
   colors: {
     ...MD3DarkTheme.colors,
@@ -66,5 +75,10 @@ export const darkTheme = {
     outline: '#322D22',
     outlineVariant: '#2A251C',
     error: '#F0786E',
+    elevation: {
+      ...MD3DarkTheme.colors.elevation,
+      level1: '#1E1B14',
+      level2: '#262219',
+    },
   },
 };

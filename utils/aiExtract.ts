@@ -1,10 +1,12 @@
 import type { RecipeFormData, CategoryId, AIProvider } from '@/types';
 
 const SYSTEM_PROMPT = `You are a recipe extraction assistant. Extract recipe information from the provided content.
+The content may be a YouTube video transcript (subtitle text) — extract ONLY what is actually mentioned in the transcript, do NOT invent ingredients or steps.
 Return ONLY valid JSON (no markdown fences, no explanation) matching this exact structure:
 {
   "title": "string",
   "categoryId": "korean"|"western"|"japanese"|"chinese"|"dessert"|"espresso"|"hand-drip"|"cold-brew"|"other",
+  "brewingTool": "string or null",
   "description": "string",
   "servings": "string",
   "ingredients": [{ "name": "string", "quantity": "string" }],
@@ -12,11 +14,15 @@ Return ONLY valid JSON (no markdown fences, no explanation) matching this exact 
   "notes": "string"
 }
 Rules:
-- If a step mentions a time duration (e.g. "3 minutes"), include timer with durationSeconds
+- Extract FAITHFULLY from the source — if the transcript says "된장 한 큰술" use exactly that
+- For YouTube transcripts: ignore intro/outro chatter, focus on cooking actions and ingredient mentions
+- If quantity is not mentioned, use empty string ""
+- If a step mentions a time duration (e.g. "3분", "3 minutes"), include timer with durationSeconds
 - For steps without time, set timer to null
 - Use Korean for all text output
 - categoryId must be exactly one of the listed values
-- Coffee recipes: use espresso, hand-drip, or cold-brew as appropriate`;
+- Coffee recipes: use espresso for espresso-based; hand-drip for pour-over/drip; cold-brew for cold brew
+- brewingTool: if categoryId is "hand-drip", set the tool (e.g. "V60", "케멕스", "칼리타", "에어로프레스", "사이폰", "프렌치프레스") or null. Other categories: null.`;
 
 function parseResult(text: string): RecipeFormData {
   let parsed: RecipeFormData;
@@ -36,18 +42,17 @@ function parseResult(text: string): RecipeFormData {
     ...s,
     timer: s.timer?.durationSeconds ? s.timer : undefined,
   }));
+  if (parsed.brewingTool === null) parsed.brewingTool = undefined;
   return parsed;
 }
 
-// ── Anthropic ────────────────────────────────────────────────
+// ── Anthropic (REST) ─────────────────────────────────────────
 async function extractWithAnthropic(
   apiKey: string,
   content: string,
   imageBase64?: string,
   imageMimeType?: string
 ): Promise<RecipeFormData> {
-  const Anthropic = (await import('@anthropic-ai/sdk')).default;
-  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
   const userContent: any[] = [];
   if (imageBase64 && imageMimeType) {
     userContent.push({
@@ -56,71 +61,75 @@ async function extractWithAnthropic(
     });
   }
   userContent.push({ type: 'text', text: content || '위 이미지에서 레시피를 추출해주세요.' });
-  const msg = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: userContent }],
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2048,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userContent }],
+    }),
   });
-  const block = msg.content.find((b) => b.type === 'text');
-  const text = block && block.type === 'text' ? block.text : '';
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Anthropic API 오류 (${res.status}): ${err}`);
+  }
+  const json = await res.json();
+  const text: string = json.content?.[0]?.text ?? '';
+  if (!text) throw new Error('Claude가 응답을 반환하지 않았습니다.');
   return parseResult(text);
 }
 
-// ── Gemini ───────────────────────────────────────────────────
+// ── Gemini (REST) ────────────────────────────────────────────
 async function extractWithGemini(
   apiKey: string,
   content: string,
   imageBase64?: string,
   imageMimeType?: string
 ): Promise<RecipeFormData> {
-  const { GoogleGenerativeAI } = await import('@google/generative-ai');
-  const genai = new GoogleGenerativeAI(apiKey);
+  const MODEL = 'gemini-3.1-flash-lite';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
-  const parts: any[] = [{ text: SYSTEM_PROMPT + '\n\n' + (content || '이미지에서 레시피를 추출해주세요.') }];
+  const parts: any[] = [];
   if (imageBase64 && imageMimeType) {
-    parts.unshift({ inlineData: { mimeType: imageMimeType, data: imageBase64 } });
+    parts.push({ inline_data: { mime_type: imageMimeType, data: imageBase64 } });
   }
+  parts.push({ text: SYSTEM_PROMPT + '\n\n' + (content || '이미지에서 레시피를 추출해주세요.') });
 
-  // Try models in order — availability varies by project/billing tier
-  const candidates = [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-pro',
-    'gemini-pro',
-  ];
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify({ contents: [{ parts }] }),
+  });
 
-  let lastError: Error = new Error('사용 가능한 Gemini 모델을 찾을 수 없습니다.');
-  for (const modelName of candidates) {
-    try {
-      const model = genai.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(parts);
-      const text = result.response.text();
-      return parseResult(text);
-    } catch (e: any) {
-      const msg: string = e?.message ?? '';
-      // 404 = model not available, quota exceeded → try next model
-      if (msg.includes('404') || msg.includes('429') || msg.includes('quota') || msg.includes('not found')) {
-        lastError = e;
-        continue;
-      }
-      throw e;
-    }
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini API 오류 (${res.status}): ${err}`);
   }
-  throw lastError;
+  const json = await res.json();
+  const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  if (!text) throw new Error('Gemini가 응답을 반환하지 않았습니다.');
+  return parseResult(text);
 }
 
-// ── OpenAI ───────────────────────────────────────────────────
+// ── OpenAI (REST) ────────────────────────────────────────────
 async function extractWithOpenAI(
   apiKey: string,
   content: string,
   imageBase64?: string,
   imageMimeType?: string
 ): Promise<RecipeFormData> {
-  const OpenAI = (await import('openai')).default;
-  const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
   const userParts: any[] = [];
   if (imageBase64 && imageMimeType) {
     userParts.push({
@@ -129,15 +138,30 @@ async function extractWithOpenAI(
     });
   }
   userParts.push({ type: 'text', text: content || '위 이미지에서 레시피를 추출해주세요.' });
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: userParts },
-    ],
-    max_tokens: 2048,
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userParts },
+      ],
+      max_tokens: 2048,
+    }),
   });
-  const text = response.choices[0]?.message?.content ?? '';
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`OpenAI API 오류 (${res.status}): ${err}`);
+  }
+  const json = await res.json();
+  const text: string = json.choices?.[0]?.message?.content ?? '';
+  if (!text) throw new Error('ChatGPT가 응답을 반환하지 않았습니다.');
   return parseResult(text);
 }
 
