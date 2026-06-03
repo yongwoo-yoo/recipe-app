@@ -1,56 +1,70 @@
-import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { useColorScheme } from 'react-native';
+import { Stack, router } from 'expo-router';
+import { PaperProvider, IconButton } from 'react-native-paper';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as SplashScreen from 'expo-splash-screen';
+import { useTimer } from '@/hooks/useTimer';
+import { lightTheme, darkTheme, appleColors } from '@/constants/theme';
 
-import { useColorScheme } from '@/components/useColorScheme';
+export { ErrorBoundary } from 'expo-router';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
-
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+function RootLayoutInner() {
+  useTimer();
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+    SplashScreen.hideAsync();
+  }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <Stack
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#fff',
+        } as any,
+        headerTitleStyle: {
+          fontSize: 17,
+          fontWeight: '600',
+        },
+        headerTintColor: appleColors.blue,
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: appleColors.gray6 },
+      }}
+    >
+      <Stack.Screen
+        name="index"
+        options={{
+          title: '레시피',
+          headerRight: () => (
+            <IconButton
+              icon="cog-outline"
+              size={22}
+              iconColor={appleColors.blue}
+              onPress={() => router.push('/settings')}
+            />
+          ),
+        }}
+      />
+      <Stack.Screen name="recipe/new" options={{ title: '새 레시피', presentation: 'modal' }} />
+      <Stack.Screen name="recipe/[id]" options={{ title: '' }} />
+      <Stack.Screen name="recipe/[id]/edit" options={{ title: '레시피 편집' }} />
+      <Stack.Screen name="recipe/import" options={{ title: 'AI로 레시피 추가', presentation: 'modal' }} />
+      <Stack.Screen name="settings" options={{ title: '설정' }} />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+
+  return (
+    <SafeAreaProvider>
+      <PaperProvider theme={theme}>
+        <RootLayoutInner />
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }
