@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, View, StyleSheet, Platform, Image, Pressable } from 'react-native';
 import { Text, Button, useTheme } from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { useRecipeStore } from '@/store/recipeStore';
 import { StepTimer } from '@/components/recipe/StepTimer';
@@ -47,14 +48,16 @@ export default function RecipeDetailScreen() {
         contentContainerStyle={styles.container}
       >
         {/* ── 풀블리드 히어로 ── */}
-        <View style={[styles.hero, { backgroundColor: cat.color }]}>
+        <View style={[styles.hero, { backgroundColor: cat.color + '30' }]}>
           {recipe.imageUri
             ? <Image source={{ uri: recipe.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-            : <View style={[StyleSheet.absoluteFill, { backgroundColor: cat.color }]} />
+            : <View style={[StyleSheet.absoluteFill, { backgroundColor: cat.color + '30' }]} />
           }
-          {/* 그라데이션 오버레이 */}
-          <View style={styles.heroGradient} />
-
+          <Text style={styles.heroEmojiBg}>{cat.emoji}</Text>
+          <LinearGradient
+            colors={['transparent', 'rgba(15,10,4,0.68)']}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.heroContent}>
             <View style={[styles.heroBadge, { backgroundColor: cat.color }]}>
               <Text style={styles.heroBadgeText}>{cat.emoji}  {cat.label}</Text>
@@ -148,13 +151,18 @@ const styles = StyleSheet.create({
 
   // Hero
   hero: {
-    height: 300,
+    aspectRatio: 16 / 7,
     position: 'relative',
+    overflow: 'hidden',
     justifyContent: 'flex-end',
+    marginHorizontal: 0,
   },
-  heroGradient: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'transparent',
+  heroEmojiBg: {
+    position: 'absolute',
+    bottom: -10,
+    right: 10,
+    fontSize: 110,
+    opacity: 0.18,
   },
   heroContent: {
     position: 'absolute',
@@ -164,8 +172,6 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 28,
     gap: 8,
-    // dark gradient simulation
-    backgroundColor: 'rgba(15,10,4,0.55)',
   },
   heroBadge: {
     alignSelf: 'flex-start',

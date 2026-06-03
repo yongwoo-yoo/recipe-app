@@ -21,15 +21,15 @@ export const CATEGORY_GROUP_MAP: Record<CategoryId, CategoryGroup> = {
 };
 
 export const CATEGORIES: Category[] = [
-  { id: 'korean',    label: '한식',      emoji: '🍚', color: '#C85A50' },
-  { id: 'western',   label: '양식',      emoji: '🍝', color: '#3D9E96' },
-  { id: 'japanese',  label: '일식',      emoji: '🍱', color: '#C88A1A' },
-  { id: 'chinese',   label: '중식',      emoji: '🥟', color: '#B86040' },
-  { id: 'dessert',   label: '디저트',    emoji: '🍰', color: '#7B70C8' },
-  { id: 'espresso',  label: '에스프레소', emoji: '☕', color: '#5E52B4' },
-  { id: 'hand-drip', label: '핸드드립',  emoji: '🫖', color: '#1A8C6E' },
-  { id: 'cold-brew', label: '콜드브루',  emoji: '🧊', color: '#4A8EC4' },
-  { id: 'other',     label: '기타',      emoji: '🍽️', color: '#8A8070' },
+  { id: 'korean',    label: '한식',      emoji: '🍚', color: '#E2574C' },
+  { id: 'western',   label: '양식',      emoji: '🍝', color: '#2BB6A8' },
+  { id: 'japanese',  label: '일식',      emoji: '🍱', color: '#E0A02E' },
+  { id: 'chinese',   label: '중식',      emoji: '🥟', color: '#D9683F' },
+  { id: 'dessert',   label: '디저트',    emoji: '🍰', color: '#8B7CE8' },
+  { id: 'espresso',  label: '에스프레소', emoji: '☕', color: '#6C5CE7' },
+  { id: 'hand-drip', label: '핸드드립',  emoji: '🫖', color: '#10A37F' },
+  { id: 'cold-brew', label: '콜드브루',  emoji: '🧊', color: '#4F9DF0' },
+  { id: 'other',     label: '기타',      emoji: '🍽️', color: '#9B9488' },
 ];
 
 export const getCategoryById = (id: CategoryId | string): Category =>
