@@ -19,6 +19,13 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: STORAGE_KEYS.SETTINGS,
       storage: createJSONStorage(() => AsyncStorage),
+      version: 1,
+      migrate: (state: any) => ({
+        anthropicApiKey: state?.anthropicApiKey ?? '',
+        geminiApiKey: state?.geminiApiKey ?? '',
+        openaiApiKey: state?.openaiApiKey ?? '',
+        selectedProvider: state?.selectedProvider ?? 'anthropic',
+      }),
     }
   )
 );

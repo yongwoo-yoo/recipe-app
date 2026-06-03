@@ -1,5 +1,5 @@
-import React from 'react';
-import { ScrollView, View, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, View, StyleSheet, Platform, Image, Pressable } from 'react-native';
 import { Text, Button, useTheme } from 'react-native-paper';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { useRecipeStore } from '@/store/recipeStore';
@@ -12,6 +12,7 @@ export default function RecipeDetailScreen() {
   const getRecipeById = useRecipeStore((s) => s.getRecipeById);
   const recipe = getRecipeById(id);
   const theme = useTheme();
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
 
   if (!recipe) {
     return (
@@ -22,16 +23,19 @@ export default function RecipeDetailScreen() {
   }
 
   const cat = getCategoryById(recipe.categoryId);
+  const toggleCheck = (itemId: string) =>
+    setChecked((c) => ({ ...c, [itemId]: !c[itemId] }));
 
   return (
     <>
       <Stack.Screen
         options={{
           title: '',
+          headerTransparent: true,
           headerRight: () => (
             <Button
               onPress={() => router.push(`/recipe/${id}/edit`)}
-              labelStyle={{ fontSize: 15, fontWeight: '500' }}
+              labelStyle={{ fontSize: 15, fontWeight: '600', color: appleColors.white }}
             >
               편집
             </Button>
@@ -42,51 +46,82 @@ export default function RecipeDetailScreen() {
         style={[styles.root, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.container}
       >
-        {/* Hero header */}
-        <View style={[styles.hero, { backgroundColor: cat.color + '14' }]}>
-          <Text style={styles.heroEmoji}>{cat.emoji}</Text>
-          <Text style={[styles.heroTitle, { color: theme.colors.onSurface }]}>{recipe.title}</Text>
-          <View style={[styles.badge, { backgroundColor: cat.color + '22' }]}>
-            <Text style={[styles.badgeText, { color: cat.color }]}>{cat.label}</Text>
+        {/* ── 풀블리드 히어로 ── */}
+        <View style={[styles.hero, { backgroundColor: cat.color }]}>
+          {recipe.imageUri
+            ? <Image source={{ uri: recipe.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            : <View style={[StyleSheet.absoluteFill, { backgroundColor: cat.color }]} />
+          }
+          {/* 그라데이션 오버레이 */}
+          <View style={styles.heroGradient} />
+
+          <View style={styles.heroContent}>
+            <View style={[styles.heroBadge, { backgroundColor: cat.color }]}>
+              <Text style={styles.heroBadgeText}>{cat.emoji}  {cat.label}</Text>
+            </View>
+            <Text style={styles.heroTitle}>{recipe.title}</Text>
+            {/* 스탯 행 */}
+            <View style={styles.heroStats}>
+              {recipe.servings ? (
+                <Text style={styles.heroStat}>🍽  {recipe.servings}</Text>
+              ) : null}
+              {recipe.ingredients.length > 0 && (
+                <Text style={styles.heroStat}>· {recipe.ingredients.length}가지 재료</Text>
+              )}
+              {recipe.steps.length > 0 && (
+                <Text style={styles.heroStat}>· {recipe.steps.length}단계</Text>
+              )}
+            </View>
+            {recipe.description ? (
+              <Text style={styles.heroDesc}>{recipe.description}</Text>
+            ) : null}
           </View>
-          {recipe.description ? (
-            <Text style={[styles.heroDesc, { color: appleColors.gray2 }]}>{recipe.description}</Text>
-          ) : null}
-          {recipe.servings ? (
-            <Text style={styles.servings}>분량 {recipe.servings}</Text>
-          ) : null}
         </View>
 
-        {/* Ingredients */}
+        {/* ── 재료 (체크리스트) ── */}
         {recipe.ingredients.length > 0 && (
           <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: appleColors.gray2 }]}>재료</Text>
-            {recipe.ingredients.map((item, idx) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.ingredientRow,
-                  idx < recipe.ingredients.length - 1 && { borderBottomWidth: 1, borderBottomColor: appleColors.gray5 },
-                ]}
-              >
-                <Text style={[styles.ingredientName, { color: theme.colors.onSurface }]}>{item.name}</Text>
-                <Text style={styles.ingredientQty}>{item.quantity}</Text>
-              </View>
-            ))}
+            <Text style={styles.sectionTitle}>재료</Text>
+            {recipe.ingredients.map((item, idx) => {
+              const done = !!checked[item.id];
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => toggleCheck(item.id)}
+                  style={[
+                    styles.ingredientRow,
+                    idx < recipe.ingredients.length - 1 && { borderBottomWidth: 1, borderBottomColor: appleColors.gray5 },
+                  ]}
+                >
+                  {/* 체크박스 */}
+                  <View style={[styles.checkbox, done && { backgroundColor: appleColors.gray1, borderColor: appleColors.gray1 }]}>
+                    {done && <Text style={styles.checkMark}>✓</Text>}
+                  </View>
+                  <Text style={[styles.ingredientName, { color: theme.colors.onSurface }, done && styles.strikethrough]}>
+                    {item.name}
+                  </Text>
+                  <Text style={[styles.ingredientQty, done && { color: appleColors.gray4 }]}>
+                    {item.quantity}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         )}
 
-        {/* Steps */}
+        {/* ── 조리 단계 ── */}
         {recipe.steps.length > 0 && (
           <View style={styles.stepsSection}>
-            <Text style={[styles.sectionTitle, { color: appleColors.gray2, marginBottom: 10 }]}>조리 단계</Text>
+            <Text style={[styles.sectionTitle, { paddingLeft: 4 }]}>조리 단계</Text>
             {recipe.steps.map((step, idx) => (
               <View key={step.id} style={[styles.stepCard, { backgroundColor: theme.colors.surface }]}>
-                <View style={[styles.stepNumWrap, { backgroundColor: theme.colors.primary }]}>
-                  <Text style={styles.stepNum}>{idx + 1}</Text>
+                <View style={[styles.stepNumWrap, { backgroundColor: appleColors.surface2, borderRadius: 11 }]}>
+                  <Text style={[styles.stepNum, { color: appleColors.gray1 }]}>{idx + 1}</Text>
                 </View>
                 <View style={styles.stepBody}>
-                  <Text style={[styles.stepText, { color: theme.colors.onSurface }]}>{step.instruction}</Text>
+                  <Text style={[styles.stepText, { color: theme.colors.onSurface }]}>
+                    {step.instruction}
+                  </Text>
                   <StepTimer step={step} recipeId={recipe.id} />
                 </View>
               </View>
@@ -94,10 +129,10 @@ export default function RecipeDetailScreen() {
           </View>
         )}
 
-        {/* Notes */}
+        {/* ── 메모 ── */}
         {recipe.notes ? (
-          <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: appleColors.gray2 }]}>메모</Text>
+          <View style={[styles.section, { backgroundColor: appleColors.orange + '14', borderColor: appleColors.orange + '40', borderWidth: 1 }]}>
+            <Text style={styles.sectionTitle}>메모</Text>
             <Text style={[styles.notes, { color: theme.colors.onSurface }]}>{recipe.notes}</Text>
           </View>
         ) : null}
@@ -110,41 +145,111 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   container: { paddingBottom: 60 },
-  hero: { padding: 28, alignItems: 'center', gap: 10 },
-  heroEmoji: { fontSize: 52 },
-  heroTitle: { fontSize: 26, fontWeight: '700', textAlign: 'center', letterSpacing: -0.5, lineHeight: 32 },
-  badge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
-  badgeText: { fontSize: 12, fontWeight: '600', letterSpacing: 0.2 },
-  heroDesc: { fontSize: 15, textAlign: 'center', lineHeight: 22, marginTop: 4 },
-  servings: { fontSize: 13, color: appleColors.gray3, letterSpacing: -0.1 },
+
+  // Hero
+  hero: {
+    height: 300,
+    position: 'relative',
+    justifyContent: 'flex-end',
+  },
+  heroGradient: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'transparent',
+  },
+  heroContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 24,
+    paddingBottom: 28,
+    gap: 8,
+    // dark gradient simulation
+    backgroundColor: 'rgba(15,10,4,0.55)',
+  },
+  heroBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  heroBadgeText: { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: 0.2 },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.6,
+    lineHeight: 36,
+  },
+  heroStats: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  heroStat: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
+  heroDesc: { fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 20, marginTop: 2 },
+
+  // Sections
   section: {
     marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 14,
+    marginTop: 14,
+    borderRadius: 18,
     overflow: 'hidden',
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0 1px 6px rgba(0,0,0,0.05)' } as any
-      : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }
-    ),
+      ? { boxShadow: '0 1px 6px rgba(34,31,26,0.06)' } as any
+      : { shadowColor: '#221F1A', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 }),
   },
-  sectionTitle: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8, padding: 16, paddingBottom: 8 },
-  ingredientRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  ingredientName: { fontSize: 15, fontWeight: '400' },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.9,
+    color: appleColors.gray2,
+    padding: 16,
+    paddingBottom: 8,
+  },
+
+  // Ingredients
+  ingredientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: appleColors.gray4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  checkMark: { fontSize: 12, color: '#fff', fontWeight: '700' },
+  ingredientName: { flex: 1, fontSize: 15 },
   ingredientQty: { fontSize: 15, color: appleColors.gray2 },
-  stepsSection: { marginHorizontal: 16, marginTop: 12, gap: 10 },
+  strikethrough: { textDecorationLine: 'line-through', color: appleColors.gray3 },
+
+  // Steps
+  stepsSection: { marginHorizontal: 16, marginTop: 14, gap: 10 },
   stepCard: {
-    borderRadius: 14,
+    borderRadius: 18,
     flexDirection: 'row',
     gap: 14,
     padding: 16,
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0 1px 6px rgba(0,0,0,0.05)' } as any
-      : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }
-    ),
+      ? { boxShadow: '0 1px 6px rgba(34,31,26,0.06)' } as any
+      : { shadowColor: '#221F1A', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 }),
   },
-  stepNumWrap: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 },
-  stepNum: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  stepNumWrap: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  stepNum: { fontSize: 14, fontWeight: '700' },
   stepBody: { flex: 1, gap: 8 },
   stepText: { fontSize: 15, lineHeight: 22 },
-  notes: { fontSize: 15, lineHeight: 22, padding: 16, paddingTop: 4 },
+
+  // Notes
+  notes: { fontSize: 15, lineHeight: 22, padding: 16, paddingTop: 0 },
 });

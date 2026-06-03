@@ -26,10 +26,10 @@ export default function ImportScreen() {
   const [error, setError] = useState('');
   const [extractedData, setExtractedData] = useState<RecipeFormData | null>(null);
 
-  const selectedProvider = useSettingsStore((s) => s.selectedProvider);
-  const anthropicApiKey = useSettingsStore((s) => s.anthropicApiKey);
-  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
-  const openaiApiKey = useSettingsStore((s) => s.openaiApiKey);
+  const selectedProvider = useSettingsStore((s) => s.selectedProvider ?? 'anthropic');
+  const anthropicApiKey = useSettingsStore((s) => s.anthropicApiKey ?? '');
+  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey ?? '');
+  const openaiApiKey = useSettingsStore((s) => s.openaiApiKey ?? '');
   const apiKey = selectedProvider === 'gemini' ? geminiApiKey : selectedProvider === 'openai' ? openaiApiKey : anthropicApiKey;
   const addRecipe = useRecipeStore((s) => s.addRecipe);
 

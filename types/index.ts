@@ -42,6 +42,7 @@ export interface Recipe {
   ingredients: Ingredient[];
   steps: RecipeStep[];
   notes?: string;
+  imageUri?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,7 +1,12 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Pressable, View } from 'react-native';
 import { Text } from 'react-native-paper';
-import { CATEGORY_GROUPS, getCategoriesForGroup, CATEGORY_GROUP_MAP, type CategoryGroup } from '@/constants/categories';
+import {
+  CATEGORY_GROUPS,
+  getCategoriesForGroup,
+  CATEGORY_GROUP_MAP,
+  type CategoryGroup,
+} from '@/constants/categories';
 import { useUIStore } from '@/store/uiStore';
 import { appleColors } from '@/constants/theme';
 import type { CategoryId } from '@/types';
@@ -15,8 +20,8 @@ export function CategoryFilter() {
 
   return (
     <View style={styles.wrapper}>
-      {/* Group tabs: 전체 / 요리 / 커피 */}
-      <View style={styles.groupRow}>
+      {/* 그룹 탭 */}
+      <View style={[styles.groupRow, { borderBottomColor: appleColors.gray5 }]}>
         {CATEGORY_GROUPS.map((g) => {
           const isActive = activeGroup === g.id;
           return (
@@ -28,28 +33,29 @@ export function CategoryFilter() {
               <Text style={[styles.groupLabel, isActive && styles.groupLabelActive]}>
                 {g.label}
               </Text>
-              {isActive && <View style={styles.groupUnderline} />}
+              {isActive && <View style={[styles.groupUnderline, { backgroundColor: appleColors.gray1 }]} />}
             </Pressable>
           );
         })}
       </View>
 
-      {/* Sub-category chips */}
+      {/* 서브 칩 */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.chipRow}
       >
+        {/* 전체 칩 */}
         <Pressable
           onPress={() => setActiveCategory('all')}
           style={[
             styles.chip,
             activeCategoryId === 'all'
-              ? styles.chipActive
-              : styles.chipInactive,
+              ? { backgroundColor: appleColors.gray1, borderColor: appleColors.gray1 }
+              : { backgroundColor: appleColors.white, borderColor: appleColors.gray5 },
           ]}
         >
-          <Text style={[styles.chipText, activeCategoryId === 'all' && styles.chipTextActive]}>
+          <Text style={[styles.chipText, activeCategoryId === 'all' ? { color: '#fff' } : { color: appleColors.gray2 }]}>
             전체
           </Text>
         </Pressable>
@@ -62,10 +68,12 @@ export function CategoryFilter() {
               onPress={() => setActiveCategory(cat.id as CategoryId)}
               style={[
                 styles.chip,
-                isActive ? styles.chipActive : styles.chipInactive,
+                isActive
+                  ? { backgroundColor: cat.color, borderColor: cat.color }
+                  : { backgroundColor: appleColors.white, borderColor: appleColors.gray5 },
               ]}
             >
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+              <Text style={[styles.chipText, { color: isActive ? '#fff' : appleColors.gray2 }]}>
                 {cat.emoji}  {cat.label}
               </Text>
             </Pressable>
@@ -78,15 +86,15 @@ export function CategoryFilter() {
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: '#ffffff',
+    backgroundColor: appleColors.white,
     borderBottomWidth: 1,
     borderBottomColor: appleColors.gray5,
   },
-
-  // Group tab row
   groupRow: {
     flexDirection: 'row',
     paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: appleColors.gray5,
   },
   groupTab: {
     paddingVertical: 12,
@@ -102,7 +110,7 @@ const styles = StyleSheet.create({
   },
   groupLabelActive: {
     color: appleColors.gray1,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   groupUnderline: {
     position: 'absolute',
@@ -111,42 +119,23 @@ const styles = StyleSheet.create({
     right: 16,
     height: 2,
     borderRadius: 1,
-    backgroundColor: appleColors.gray1,
   },
-
-  // Chip row
   chipRow: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    height: 50,
+    height: 52,
   },
   chip: {
-    height: 30,
-    borderRadius: 15,
-    paddingHorizontal: 12,
+    height: 36,
+    borderRadius: 18,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     borderWidth: 1,
   },
-  chipActive: {
-    backgroundColor: appleColors.gray1,
-    borderColor: appleColors.gray1,
-  },
-  chipInactive: {
-    backgroundColor: 'transparent',
-    borderColor: appleColors.gray4,
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: appleColors.gray2,
-    letterSpacing: -0.1,
-  },
-  chipTextActive: {
-    color: '#ffffff',
-  },
+  chipText: { fontSize: 13, fontWeight: '600', letterSpacing: -0.1 },
 });

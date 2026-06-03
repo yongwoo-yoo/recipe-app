@@ -27,18 +27,15 @@ function parseResult(text: string): RecipeFormData {
     if (!match) throw new Error('AI가 올바른 형식의 레시피를 반환하지 않았습니다.');
     parsed = JSON.parse(match[0]);
   }
-
   const valid: CategoryId[] = [
     'korean', 'western', 'japanese', 'chinese', 'dessert',
     'espresso', 'hand-drip', 'cold-brew', 'other',
   ];
   if (!valid.includes(parsed.categoryId)) parsed.categoryId = 'other';
-
   parsed.steps = (parsed.steps ?? []).map((s) => ({
     ...s,
     timer: s.timer?.durationSeconds ? s.timer : undefined,
   }));
-
   return parsed;
 }
 
@@ -51,7 +48,6 @@ async function extractWithAnthropic(
 ): Promise<RecipeFormData> {
   const Anthropic = (await import('@anthropic-ai/sdk')).default;
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-
   const userContent: any[] = [];
   if (imageBase64 && imageMimeType) {
     userContent.push({
@@ -60,14 +56,12 @@ async function extractWithAnthropic(
     });
   }
   userContent.push({ type: 'text', text: content || '위 이미지에서 레시피를 추출해주세요.' });
-
   const msg = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 2048,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userContent }],
   });
-
   const block = msg.content.find((b) => b.type === 'text');
   const text = block && block.type === 'text' ? block.text : '';
   return parseResult(text);
@@ -82,17 +76,40 @@ async function extractWithGemini(
 ): Promise<RecipeFormData> {
   const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genai = new GoogleGenerativeAI(apiKey);
-  const model = genai.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const parts: any[] = [{ text: SYSTEM_PROMPT + '\n\n' + (content || '이미지에서 레시피를 추출해주세요.') }];
-
   if (imageBase64 && imageMimeType) {
     parts.unshift({ inlineData: { mimeType: imageMimeType, data: imageBase64 } });
   }
 
-  const result = await model.generateContent(parts);
-  const text = result.response.text();
-  return parseResult(text);
+  // Try models in order — availability varies by project/billing tier
+  const candidates = [
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-pro',
+    'gemini-pro',
+  ];
+
+  let lastError: Error = new Error('사용 가능한 Gemini 모델을 찾을 수 없습니다.');
+  for (const modelName of candidates) {
+    try {
+      const model = genai.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(parts);
+      const text = result.response.text();
+      return parseResult(text);
+    } catch (e: any) {
+      const msg: string = e?.message ?? '';
+      // 404 = model not available, quota exceeded → try next model
+      if (msg.includes('404') || msg.includes('429') || msg.includes('quota') || msg.includes('not found')) {
+        lastError = e;
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastError;
 }
 
 // ── OpenAI ───────────────────────────────────────────────────
@@ -104,7 +121,6 @@ async function extractWithOpenAI(
 ): Promise<RecipeFormData> {
   const OpenAI = (await import('openai')).default;
   const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
-
   const userParts: any[] = [];
   if (imageBase64 && imageMimeType) {
     userParts.push({
@@ -113,7 +129,6 @@ async function extractWithOpenAI(
     });
   }
   userParts.push({ type: 'text', text: content || '위 이미지에서 레시피를 추출해주세요.' });
-
   const response = await client.chat.completions.create({
     model: 'gpt-4o',
     messages: [
@@ -122,7 +137,6 @@ async function extractWithOpenAI(
     ],
     max_tokens: 2048,
   });
-
   const text = response.choices[0]?.message?.content ?? '';
   return parseResult(text);
 }

@@ -28,7 +28,7 @@ function RootLayoutInner() {
           fontSize: 17,
           fontWeight: '600',
         },
-        headerTintColor: appleColors.blue,
+        headerTintColor: appleColors.accent,
         headerShadowVisible: false,
         contentStyle: { backgroundColor: appleColors.gray6 },
       }}
@@ -41,7 +41,7 @@ function RootLayoutInner() {
             <IconButton
               icon="cog-outline"
               size={22}
-              iconColor={appleColors.blue}
+              iconColor={appleColors.accent}
               onPress={() => router.push('/settings')}
             />
           ),
