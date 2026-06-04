@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ScrollView, View, StyleSheet, Platform, Image, Pressable, useWindowDimensions, Alert, TextInput } from 'react-native';
 import { Text, Button, useTheme } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,6 +6,7 @@ import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { useRecipeStore } from '@/store/recipeStore';
 import { StepTimer } from '@/components/recipe/StepTimer';
 import { TotalTimer } from '@/components/timer/TotalTimer';
+import { FloatingTimerBadge } from '@/components/timer/FloatingTimerBadge';
 import { getCategoryById } from '@/constants/categories';
 import { appleColors } from '@/constants/theme';
 
@@ -20,6 +21,40 @@ export default function RecipeDetailScreen() {
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [historyNote, setHistoryNote] = useState('');
   const [showHistoryInput, setShowHistoryInput] = useState(false);
+
+  // 전체 타이머 상태
+  const [timerDuration, setTimerDuration] = useState(0);
+  const [timerRemaining, setTimerRemaining] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerStarted, setTimerStarted] = useState(false);
+  const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (timerRunning) {
+      timerInterval.current = setInterval(() => {
+        setTimerRemaining((p) => {
+          if (p <= 1) { setTimerRunning(false); return 0; }
+          return p - 1;
+        });
+      }, 1000);
+    } else {
+      if (timerInterval.current) clearInterval(timerInterval.current);
+    }
+    return () => { if (timerInterval.current) clearInterval(timerInterval.current); };
+  }, [timerRunning]);
+
+  const startTotalTimer = (sec: number) => {
+    setTimerDuration(sec);
+    setTimerRemaining(sec);
+    setTimerRunning(true);
+    setTimerStarted(true);
+  };
+  const resetTotalTimer = () => {
+    setTimerRunning(false);
+    setTimerStarted(false);
+    setTimerRemaining(0);
+    setTimerDuration(0);
+  };
 
   const handleDelete = () => {
     const doDelete = () => { deleteRecipe(id); router.push('/'); };
@@ -143,7 +178,7 @@ export default function RecipeDetailScreen() {
 
           {/* 전체 타이머 — 재료 아래 */}
           {!isTwoCol && hasTimers && (
-            <TotalTimer recipe={recipe} />
+            <TotalTimer onStart={startTotalTimer} />
           )}
 
           {/* 단계 + 메모 */}
@@ -247,6 +282,17 @@ export default function RecipeDetailScreen() {
         </View>
 
       </ScrollView>
+
+      {/* 플로팅 타이머 — ScrollView 밖, absolute */}
+      {timerStarted && (
+        <FloatingTimerBadge
+          remaining={timerRemaining}
+          duration={timerDuration}
+          isRunning={timerRunning}
+          onToggle={() => setTimerRunning((v) => !v)}
+          onReset={resetTotalTimer}
+        />
+      )}
 
       </View>
     </>
