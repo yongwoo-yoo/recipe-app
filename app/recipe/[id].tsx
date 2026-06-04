@@ -94,9 +94,6 @@ export default function RecipeDetailScreen() {
                 <Text style={styles.heroStat}>· {recipe.steps.length}단계</Text>
               )}
             </View>
-            {recipe.description ? (
-              <Text style={styles.heroDesc}>{recipe.description}</Text>
-            ) : null}
           </View>
         </View>
 
