@@ -21,6 +21,7 @@ export default function RecipeDetailScreen() {
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [historyNote, setHistoryNote] = useState('');
   const [showHistoryInput, setShowHistoryInput] = useState(false);
+  const [heroContentH, setHeroContentH] = useState(0);
 
   // 전체 타이머 상태
   const [timerDuration, setTimerDuration] = useState(0);
@@ -106,7 +107,7 @@ export default function RecipeDetailScreen() {
         contentContainerStyle={styles.container}
       >
         {/* ── 풀블리드 히어로 ── */}
-        <View style={[styles.hero, { backgroundColor: cat.color + '30' }]}>
+        <View style={[styles.hero, { backgroundColor: cat.color + '30', minHeight: Math.max(260, heroContentH + 80) }]}>
           {recipe.imageUri
             ? <Image source={{ uri: recipe.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             : <View style={[StyleSheet.absoluteFill, { backgroundColor: cat.color + '30' }]} />
@@ -116,7 +117,7 @@ export default function RecipeDetailScreen() {
             colors={['transparent', 'rgba(15,10,4,0.68)']}
             style={StyleSheet.absoluteFill}
           />
-          <View style={styles.heroContent}>
+          <View style={styles.heroContent} onLayout={(e) => setHeroContentH(e.nativeEvent.layout.height)}>
             <View style={[styles.heroBadge, { backgroundColor: cat.color }]}>
               <Text style={styles.heroBadgeText}>{cat.emoji}  {cat.label}</Text>
             </View>
@@ -321,11 +322,8 @@ const styles = StyleSheet.create({
   },
   heroContent: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: 0, left: 0, right: 0,
     padding: 24,
-    paddingTop: 48,
     paddingBottom: 28,
     gap: 8,
   },
@@ -343,10 +341,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
     lineHeight: 36,
   },
-  heroStats: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  heroStats: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 },
   heroStat: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
-  heroDesc: { fontSize: 14, color: 'rgba(255,255,255,0.8)', lineHeight: 20, marginTop: 4 },
-  heroSource: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 4, lineHeight: 16 },
+  heroDesc: { fontSize: 14, color: 'rgba(255,255,255,0.8)', lineHeight: 20, marginTop: 8 },
+  heroSource: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 6, lineHeight: 16 },
 
   // 2-column grid (web ≥860px)
   bodyGrid: {
