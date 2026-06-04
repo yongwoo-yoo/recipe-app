@@ -113,13 +113,15 @@ export function TotalTimer({ recipe }: Props) {
             { label: '1초', delta: 1 },
           ].map(({ label, delta }) => (
             <View key={label} style={styles.adjGroup}>
-              <Pressable style={styles.adjBtn} onPress={() => add(-delta)} hitSlop={6}>
-                <Text style={styles.adjTxt}>−</Text>
-              </Pressable>
               <Text style={styles.adjLabel}>{label}</Text>
-              <Pressable style={[styles.adjBtn, styles.adjBtnPlus]} onPress={() => add(delta)} hitSlop={6}>
-                <Text style={[styles.adjTxt, { color: '#fff' }]}>+</Text>
-              </Pressable>
+              <View style={styles.adjBtnRow}>
+                <Pressable style={styles.adjBtn} onPress={() => add(-delta)} hitSlop={8}>
+                  <Text style={styles.adjMinus}>−</Text>
+                </Pressable>
+                <Pressable style={[styles.adjBtn, styles.adjBtnPlus]} onPress={() => add(delta)} hitSlop={8}>
+                  <Text style={styles.adjPlus}>+</Text>
+                </Pressable>
+              </View>
             </View>
           ))}
         </View>
@@ -143,8 +145,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
     borderRadius: 18,
     backgroundColor: appleColors.white,
-    padding: 18,
-    gap: 14,
+    padding: 14,
+    gap: 12,
     borderWidth: 1,
     borderColor: appleColors.gray5,
   },
@@ -156,7 +158,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   display: {
-    fontSize: 44,
+    fontSize: 36,
     fontWeight: '800',
     color: appleColors.gray1,
     letterSpacing: -1,
@@ -176,35 +178,36 @@ const styles = StyleSheet.create({
   },
   adjGroup: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: appleColors.gray6,
-    borderRadius: 12,
-    padding: 6,
+    gap: 6,
+  },
+  adjLabel: {
+    fontSize: 12, fontWeight: '700',
+    color: appleColors.gray2,
+  },
+  adjBtnRow: {
+    flexDirection: 'row',
     gap: 4,
   },
   adjBtn: {
-    width: 34, height: 34, borderRadius: 10,
-    backgroundColor: appleColors.white,
+    width: 36, height: 36, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: appleColors.gray5,
+    backgroundColor: appleColors.gray5,
   },
   adjBtnPlus: {
     backgroundColor: appleColors.gray1,
-    borderColor: appleColors.gray1,
   },
-  adjTxt: { fontSize: 18, fontWeight: '600', color: appleColors.gray1, lineHeight: 22 },
-  adjLabel: { fontSize: 12, fontWeight: '700', color: appleColors.gray2, flex: 1, textAlign: 'center' },
+  adjMinus: { fontSize: 20, fontWeight: '500', color: appleColors.gray1, lineHeight: 22 },
+  adjPlus: { fontSize: 20, fontWeight: '500', color: '#fff', lineHeight: 22 },
 
   startBtn: {
     backgroundColor: appleColors.gray1,
-    borderRadius: 14,
-    height: 48,
+    borderRadius: 12,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  startTxt: { fontSize: 16, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
+  startTxt: { fontSize: 15, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 });
 
 const float = StyleSheet.create({
