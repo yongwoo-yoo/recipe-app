@@ -38,6 +38,7 @@ export interface Recipe {
   title: string;
   categoryId: CategoryId;
   description?: string;
+  source?: string;
   servings?: string;
   ingredients: Ingredient[];
   steps: RecipeStep[];
@@ -52,6 +53,7 @@ export interface RecipeFormData {
   title: string;
   categoryId: CategoryId;
   description: string;
+  source?: string;
   servings: string;
   ingredients: Ingredient[];
   steps: RecipeStep[];

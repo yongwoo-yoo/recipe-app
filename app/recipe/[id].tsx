@@ -43,6 +43,8 @@ export default function RecipeDetailScreen() {
   const toggleCheck = (itemId: string) =>
     setChecked((c) => ({ ...c, [itemId]: !c[itemId] }));
 
+  const hasTimers = recipe.steps.some((s) => s.timer);
+
   return (
     <>
       <Stack.Screen
@@ -59,8 +61,9 @@ export default function RecipeDetailScreen() {
           ),
         }}
       />
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <ScrollView
-        style={[styles.root, { backgroundColor: theme.colors.background }]}
+        style={{ flex: 1 }}
         contentContainerStyle={styles.container}
       >
         {/* ── 풀블리드 히어로 ── */}
@@ -97,6 +100,18 @@ export default function RecipeDetailScreen() {
           </View>
         </View>
 
+        {/* ── 요약 + 출처 카드 ── */}
+        {(recipe.description || recipe.source) && (
+          <View style={styles.summaryCard}>
+            {recipe.description ? (
+              <Text style={styles.summaryDesc}>{recipe.description}</Text>
+            ) : null}
+            {recipe.source ? (
+              <Text style={styles.summarySource} numberOfLines={2}>🔗 {recipe.source}</Text>
+            ) : null}
+          </View>
+        )}
+
         {/* ── body: 재료 + 단계 (웹에서 2컬럼) ── */}
         <View style={isTwoCol ? styles.bodyGrid : undefined}>
 
@@ -131,6 +146,11 @@ export default function RecipeDetailScreen() {
             </View>
           )}
 
+          {/* 전체 타이머 — 재료 아래 */}
+          {!isTwoCol && hasTimers && (
+            <TotalTimer recipe={recipe} />
+          )}
+
           {/* 단계 + 메모 */}
           <View style={isTwoCol ? styles.stepsCol : undefined}>
             {recipe.steps.length > 0 && (
@@ -163,11 +183,6 @@ export default function RecipeDetailScreen() {
 
         </View>
 
-        {/* ── 전체 타이머 ── */}
-        {recipe.steps.some((s) => s.timer) && (
-          <TotalTimer recipe={recipe} />
-        )}
-
         {/* ── 편집 / 삭제 액션 ── */}
         <View style={styles.actionBar}>
           <Pressable
@@ -185,6 +200,8 @@ export default function RecipeDetailScreen() {
         </View>
 
       </ScrollView>
+
+      </View>
     </>
   );
 }
@@ -235,6 +252,18 @@ const styles = StyleSheet.create({
   heroStats: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   heroStat: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
   heroDesc: { fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 20, marginTop: 2 },
+  summaryCard: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: appleColors.white,
+    borderWidth: 1,
+    borderColor: appleColors.gray5,
+    gap: 6,
+  },
+  summaryDesc: { fontSize: 14, lineHeight: 20, color: appleColors.gray1 },
+  summarySource: { fontSize: 12, color: appleColors.gray3, lineHeight: 17 },
 
   // 2-column grid (web ≥860px)
   bodyGrid: {

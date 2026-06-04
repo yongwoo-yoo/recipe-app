@@ -127,15 +127,12 @@ export function ImportContent({ onClose }: Props) {
       const result = await extractRecipe(selectedProvider, apiKey, content, base64, mime);
       result.ingredients = result.ingredients.map((i) => ({ ...i, id: i.id || genId() }));
       result.steps = result.steps.map((s) => ({ ...s, id: s.id || genId() }));
-      // 출처 정보 추가
+      // 출처 별도 필드에 저장
       const now = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-      const sourceNote =
-        method === 'url' ? `출처: ${inputText.trim()}` :
+      result.source =
+        method === 'url' ? inputText.trim() :
         method === 'image' ? `사진에서 추가 · ${now}` :
         `텍스트로 추가 · ${now}`;
-      result.description = result.description
-        ? `${result.description}\n\n${sourceNote}`
-        : sourceNote;
       setExtractedData(result);
     } catch (e: any) {
       setError(e.message ?? '알 수 없는 오류가 발생했습니다.');
@@ -175,10 +172,7 @@ export function ImportContent({ onClose }: Props) {
               const result = await extractRecipe(selectedProvider, apiKey, fetchedTranscript);
               result.ingredients = result.ingredients.map((i) => ({ ...i, id: i.id || genId() }));
               result.steps = result.steps.map((s) => ({ ...s, id: s.id || genId() }));
-              const sourceNote = `출처: ${inputText.trim()}`;
-              result.description = result.description
-                ? `${result.description}\n\n${sourceNote}`
-                : sourceNote;
+              result.source = inputText.trim();
               setExtractedData(result);
               setFetchedTranscript(null);
             } catch (e: any) {
