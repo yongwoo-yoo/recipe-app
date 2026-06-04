@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Pressable, Platform, StyleSheet, KeyboardAvoidingView } from 'react-native';
+import { Modal, View, Pressable, Platform, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 import { appleColors } from '@/constants/theme';
 
@@ -20,10 +20,6 @@ export function AppModal({ visible, title, onClose, children }: Props) {
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
       <View style={[styles.backdrop, !isWeb && styles.backdropMobile]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={[styles.sheet, !isWeb && styles.sheetMobile]}>
@@ -43,7 +39,6 @@ export function AppModal({ visible, title, onClose, children }: Props) {
           </View>
         </View>
       </View>
-      </KeyboardAvoidingView>
     </Modal>
   );
 }
