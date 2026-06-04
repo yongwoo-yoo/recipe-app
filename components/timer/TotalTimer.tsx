@@ -1,28 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Pressable, TextInput as RNTextInput, Modal, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Modal, Platform } from 'react-native';
 import { Text } from 'react-native-paper';
 import { appleColors } from '@/constants/theme';
 import { formatTime } from '@/utils/formatTime';
 import type { Recipe } from '@/types';
-
-const MAX_SECONDS = 600; // 최대 10분
 
 interface Props {
   recipe: Recipe;
 }
 
 export function TotalTimer({ recipe }: Props) {
-  const stepTotal = Math.min(
-    recipe.steps.filter((s) => s.timer?.durationSeconds).reduce((sum, s) => sum + (s.timer?.durationSeconds ?? 0), 0),
-    MAX_SECONDS
-  );
-
-  const [duration, setDuration] = useState(0);
+  // 설정값 (초)
+  const [configured, setConfigured] = useState(0);
+  // 실행 상태
   const [remaining, setRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
-  const [expanded, setExpanded] = useState(true);
-  const [customMin, setCustomMin] = useState('');
+  const [panelOpen, setPanelOpen] = useState(true);
   const interval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -39,31 +33,32 @@ export function TotalTimer({ recipe }: Props) {
     return () => { if (interval.current) clearInterval(interval.current); };
   }, [isRunning]);
 
-  const start = (sec: number) => {
-    const capped = Math.min(sec, MAX_SECONDS);
-    setDuration(capped);
-    setRemaining(capped);
+  const add = (sec: number) => setConfigured((v) => Math.max(0, v + sec));
+
+  const handleStart = () => {
+    if (configured <= 0) return;
+    setRemaining(configured);
     setIsRunning(true);
     setIsStarted(true);
-    setExpanded(false);
+    setPanelOpen(false);
   };
 
-  const reset = () => {
+  const handleReset = () => {
     setIsRunning(false);
     setIsStarted(false);
     setRemaining(0);
-    setDuration(0);
-    setExpanded(true);
+    setConfigured(0);
+    setPanelOpen(true);
   };
 
   const isFinished = isStarted && remaining === 0;
-  const progress = duration > 0 ? remaining / duration : 0;
+  const progress = configured > 0 ? remaining / configured : 0;
 
-  // ── 플로팅 (실행 중) ──────────────────────────────────────────
+  // ── 플로팅 (실행 중) ─────────────────────────────────────────
   const FloatingBadge = () => (
-    <Modal transparent animationType="fade" visible={isStarted} onRequestClose={() => setExpanded(false)}>
+    <Modal transparent animationType="fade" visible={isStarted} onRequestClose={() => setPanelOpen(false)}>
       <View style={float.root} pointerEvents="box-none">
-        {expanded && (
+        {panelOpen && (
           <View style={float.panel}>
             <Text style={[float.bigTime, isFinished && { color: appleColors.red }]}>
               {isFinished ? '완료!' : formatTime(remaining)}
@@ -72,7 +67,7 @@ export function TotalTimer({ recipe }: Props) {
               <View style={[float.fill, { width: `${progress * 100}%` as any }]} />
             </View>
             <View style={float.btns}>
-              <Pressable onPress={reset} style={float.ctrl} hitSlop={8}>
+              <Pressable onPress={handleReset} style={float.ctrl} hitSlop={8}>
                 <Text style={float.ctrlTxt}>↺</Text>
               </Pressable>
               <Pressable onPress={() => setIsRunning(!isRunning)} style={[float.ctrl, float.ctrlMain]}>
@@ -83,7 +78,7 @@ export function TotalTimer({ recipe }: Props) {
         )}
         <Pressable
           style={[float.fab, isFinished && { backgroundColor: appleColors.red }, isRunning && { backgroundColor: appleColors.accent }]}
-          onPress={() => setExpanded((v) => !v)}
+          onPress={() => setPanelOpen((v) => !v)}
         >
           <Text style={float.fabTxt}>{isFinished ? '✓' : formatTime(remaining)}</Text>
         </Pressable>
@@ -91,43 +86,52 @@ export function TotalTimer({ recipe }: Props) {
     </Modal>
   );
 
-  // ── 설정 섹션 (재료 아래 고정) ───────────────────────────────
+  // ── 설정 섹션 ─────────────────────────────────────────────────
   return (
     <>
       <FloatingBadge />
       <View style={styles.container}>
-        <Text style={styles.label}>⏱ 전체 타이머 <Text style={styles.labelSub}>(최대 10분)</Text></Text>
-        <View style={styles.presets}>
-          {[3, 5, 7, 10].map((m) => (
-            <Pressable key={m} style={styles.presetBtn} onPress={() => start(m * 60)}>
-              <Text style={styles.presetVal}>{m}분</Text>
+        <Text style={styles.label}>⏱ 전체 타이머</Text>
+
+        {/* 현재 설정된 시간 */}
+        <View style={styles.displayRow}>
+          <Text style={[styles.display, configured === 0 && { color: appleColors.gray4 }]}>
+            {configured === 0 ? '0:00' : formatTime(configured)}
+          </Text>
+          {configured > 0 && (
+            <Pressable onPress={() => setConfigured(0)} style={styles.clearBtn} hitSlop={8}>
+              <Text style={styles.clearTxt}>초기화</Text>
             </Pressable>
+          )}
+        </View>
+
+        {/* 증감 버튼 */}
+        <View style={styles.adjustRow}>
+          {[
+            { label: '분', delta: 60 },
+            { label: '10초', delta: 10 },
+            { label: '1초', delta: 1 },
+          ].map(({ label, delta }) => (
+            <View key={label} style={styles.adjGroup}>
+              <Pressable style={styles.adjBtn} onPress={() => add(-delta)} hitSlop={6}>
+                <Text style={styles.adjTxt}>−</Text>
+              </Pressable>
+              <Text style={styles.adjLabel}>{label}</Text>
+              <Pressable style={[styles.adjBtn, styles.adjBtnPlus]} onPress={() => add(delta)} hitSlop={6}>
+                <Text style={[styles.adjTxt, { color: '#fff' }]}>+</Text>
+              </Pressable>
+            </View>
           ))}
         </View>
-        <View style={styles.customRow}>
-          <RNTextInput
-            value={customMin}
-            onChangeText={(v) => {
-              const n = parseInt(v, 10);
-              if (v === '') setCustomMin('');
-              else if (!isNaN(n)) setCustomMin(String(Math.min(n, 10)));
-            }}
-            placeholder="분 입력 (최대 10)"
-            keyboardType="number-pad"
-            style={styles.input}
-            placeholderTextColor={appleColors.gray4}
-            maxLength={2}
-          />
-          <Pressable
-            style={styles.startBtn}
-            onPress={() => {
-              const m = parseInt(customMin, 10);
-              if (!isNaN(m) && m > 0) { start(m * 60); setCustomMin(''); }
-            }}
-          >
-            <Text style={styles.startBtnTxt}>시작</Text>
-          </Pressable>
-        </View>
+
+        {/* 시작 버튼 */}
+        <Pressable
+          style={[styles.startBtn, configured <= 0 && { opacity: 0.35 }]}
+          disabled={configured <= 0}
+          onPress={handleStart}
+        >
+          <Text style={styles.startTxt}>▶  시작</Text>
+        </Pressable>
       </View>
     </>
   );
@@ -140,33 +144,69 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: appleColors.white,
     padding: 18,
-    gap: 12,
+    gap: 14,
     borderWidth: 1,
     borderColor: appleColors.gray5,
   },
-  label: { fontSize: 13, fontWeight: '700', color: appleColors.gray1 },
-  labelSub: { fontSize: 11, fontWeight: '400', color: appleColors.gray3 },
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  presetBtn: {
-    borderRadius: 10, borderWidth: 1.5, borderColor: appleColors.gray4,
-    paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center',
+  label: { fontSize: 13, fontWeight: '700', color: appleColors.gray2, letterSpacing: 0.2 },
+
+  displayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  presetSub: { fontSize: 9, color: appleColors.gray3 },
-  presetVal: { fontSize: 14, fontWeight: '700', color: appleColors.gray1 },
-  customRow: { flexDirection: 'row', gap: 8 },
-  input: {
-    flex: 1, height: 42, borderRadius: 10, borderWidth: 1.5,
-    borderColor: appleColors.gray4, paddingHorizontal: 12,
-    fontSize: 14, color: appleColors.gray1,
+  display: {
+    fontSize: 44,
+    fontWeight: '800',
+    color: appleColors.gray1,
+    letterSpacing: -1,
+    fontVariant: ['tabular-nums'] as any,
   },
+  clearBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: appleColors.gray5,
+  },
+  clearTxt: { fontSize: 12, fontWeight: '600', color: appleColors.gray2 },
+
+  adjustRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  adjGroup: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: appleColors.gray6,
+    borderRadius: 12,
+    padding: 6,
+    gap: 4,
+  },
+  adjBtn: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: appleColors.white,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: appleColors.gray5,
+  },
+  adjBtnPlus: {
+    backgroundColor: appleColors.gray1,
+    borderColor: appleColors.gray1,
+  },
+  adjTxt: { fontSize: 18, fontWeight: '600', color: appleColors.gray1, lineHeight: 22 },
+  adjLabel: { fontSize: 12, fontWeight: '700', color: appleColors.gray2, flex: 1, textAlign: 'center' },
+
   startBtn: {
-    height: 42, paddingHorizontal: 20, borderRadius: 10,
-    backgroundColor: appleColors.gray1, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: appleColors.gray1,
+    borderRadius: 14,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  startBtnTxt: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  startTxt: { fontSize: 16, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
 });
 
-// 플로팅 스타일
 const float = StyleSheet.create({
   root: {
     position: 'absolute',
