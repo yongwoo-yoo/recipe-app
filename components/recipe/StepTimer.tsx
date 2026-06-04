@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Button, Text } from 'react-native-paper';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { Text } from 'react-native-paper';
 import { useTimerStore } from '@/store/timerStore';
 import { CountdownTimer } from '@/components/timer/CountdownTimer';
 import { formatTime } from '@/utils/formatTime';
+import { appleColors } from '@/constants/theme';
 import type { RecipeStep } from '@/types';
 
 interface Props {
@@ -19,30 +20,35 @@ export function StepTimer({ step, recipeId }: Props) {
   const isActive = activeStepId === step.id && activeRecipeId === recipeId;
   const { durationSeconds, label } = step.timer;
 
+  if (isActive) return <CountdownTimer />;
+
   return (
-    <View style={styles.container}>
-      {isActive ? (
-        <CountdownTimer />
-      ) : (
-        <View style={styles.preview}>
-          <Text variant="bodySmall" style={styles.label}>
-            {label ? `⏱ ${label}` : `⏱ ${formatTime(durationSeconds)}`}
-          </Text>
-          <Button
-            mode="contained-tonal"
-            compact
-            onPress={() => startTimer(step.id, recipeId, durationSeconds)}
-          >
-            타이머 시작
-          </Button>
-        </View>
-      )}
-    </View>
+    <Pressable
+      style={styles.chip}
+      onPress={() => startTimer(step.id, recipeId, durationSeconds)}
+    >
+      <Text style={styles.chipIcon}>⏱</Text>
+      <Text style={styles.chipTime}>{label || formatTime(durationSeconds)}</Text>
+      <Text style={styles.chipStart}>시작</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { marginTop: 8 },
-  preview: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  label: { opacity: 0.7 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    backgroundColor: appleColors.surface2,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: appleColors.gray5,
+  },
+  chipIcon: { fontSize: 13 },
+  chipTime: { fontSize: 13, fontWeight: '600', color: appleColors.gray1 },
+  chipStart: { fontSize: 12, color: appleColors.accent, fontWeight: '600', marginLeft: 2 },
 });

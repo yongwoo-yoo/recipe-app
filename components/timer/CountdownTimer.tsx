@@ -1,58 +1,61 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Text, IconButton, useTheme } from 'react-native-paper';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { Text } from 'react-native-paper';
 import { useTimerStore } from '@/store/timerStore';
+import { appleColors } from '@/constants/theme';
 import { formatTime } from '@/utils/formatTime';
 
 export function CountdownTimer() {
   const { remainingSeconds, totalSeconds, isRunning, pauseTimer, resumeTimer, resetTimer } =
     useTimerStore();
-  const theme = useTheme();
 
   const progress = totalSeconds > 0 ? remainingSeconds / totalSeconds : 0;
   const isFinished = remainingSeconds === 0 && totalSeconds > 0;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.primaryContainer }]}>
-      <Text
-        variant="displaySmall"
-        style={[styles.time, isFinished && { color: theme.colors.error }]}
-      >
-        {isFinished ? '완료!' : formatTime(remainingSeconds)}
-      </Text>
-      <View style={styles.progressBar}>
-        <View
-          style={[
-            styles.progressFill,
-            {
-              width: `${progress * 100}%` as any,
-              backgroundColor: isFinished ? theme.colors.error : theme.colors.primary,
-            },
-          ]}
-        />
+    <View style={styles.container}>
+      {/* 프로그레스 바 */}
+      <View style={styles.bar}>
+        <View style={[styles.fill, { width: `${progress * 100}%` as any, backgroundColor: isFinished ? appleColors.red : appleColors.accent }]} />
       </View>
-      <View style={styles.controls}>
-        <IconButton
-          icon="refresh"
-          size={24}
-          onPress={resetTimer}
-          iconColor={theme.colors.onPrimaryContainer}
-        />
-        <IconButton
-          icon={isRunning ? 'pause' : 'play'}
-          size={32}
-          onPress={isRunning ? pauseTimer : resumeTimer}
-          iconColor={theme.colors.onPrimaryContainer}
-        />
+
+      {/* 시간 + 컨트롤 */}
+      <View style={styles.row}>
+        <Text style={[styles.time, isFinished && { color: appleColors.red }]}>
+          {isFinished ? '완료!' : formatTime(remainingSeconds)}
+        </Text>
+        <View style={styles.btns}>
+          <Pressable onPress={resetTimer} style={styles.btn} hitSlop={8}>
+            <Text style={styles.btnTxt}>↺</Text>
+          </Pressable>
+          <Pressable onPress={isRunning ? pauseTimer : resumeTimer} style={[styles.btn, styles.btnMain]}>
+            <Text style={styles.btnMainTxt}>{isRunning ? '⏸' : '▶'}</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { borderRadius: 12, padding: 16, alignItems: 'center', gap: 8 },
-  time: { fontWeight: '700', fontVariant: ['tabular-nums'] },
-  progressBar: { width: '100%', height: 6, backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 3 },
-  controls: { flexDirection: 'row', alignItems: 'center' },
+  container: { marginTop: 8, gap: 6 },
+  bar: { height: 4, backgroundColor: appleColors.gray5, borderRadius: 2, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 2 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  time: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: appleColors.gray1,
+    fontVariant: ['tabular-nums'] as any,
+    letterSpacing: -0.5,
+  },
+  btns: { flexDirection: 'row', gap: 8 },
+  btn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: appleColors.gray5,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  btnTxt: { fontSize: 15, color: appleColors.gray2 },
+  btnMain: { backgroundColor: appleColors.gray1 },
+  btnMainTxt: { fontSize: 14, color: '#fff' },
 });
