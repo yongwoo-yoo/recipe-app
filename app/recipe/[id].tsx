@@ -94,20 +94,14 @@ export default function RecipeDetailScreen() {
                 <Text style={styles.heroStat}>· {recipe.steps.length}단계</Text>
               )}
             </View>
-          </View>
-        </View>
-
-        {/* ── 요약 + 출처 카드 ── */}
-        {(recipe.description || recipe.source) && (
-          <View style={styles.summaryCard}>
             {recipe.description ? (
-              <Text style={styles.summaryDesc}>{recipe.description}</Text>
+              <Text style={styles.heroDesc}>{recipe.description}</Text>
             ) : null}
             {recipe.source ? (
-              <Text style={styles.summarySource} numberOfLines={2}>🔗 {recipe.source}</Text>
+              <Text style={styles.heroSource} numberOfLines={2}>🔗 {recipe.source}</Text>
             ) : null}
           </View>
-        )}
+        </View>
 
         {/* ── body: 재료 + 단계 (웹에서 2컬럼) ── */}
         <View style={isTwoCol ? styles.bodyGrid : undefined}>
@@ -210,7 +204,7 @@ const styles = StyleSheet.create({
 
   // Hero
   hero: {
-    aspectRatio: 16 / 7,
+    minHeight: 260,
     position: 'relative',
     overflow: 'hidden',
     justifyContent: 'flex-end',
@@ -248,19 +242,8 @@ const styles = StyleSheet.create({
   },
   heroStats: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   heroStat: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
-  heroDesc: { fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 20, marginTop: 2 },
-  summaryCard: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: appleColors.white,
-    borderWidth: 1,
-    borderColor: appleColors.gray5,
-    gap: 6,
-  },
-  summaryDesc: { fontSize: 14, lineHeight: 20, color: appleColors.gray1 },
-  summarySource: { fontSize: 12, color: appleColors.gray3, lineHeight: 17 },
+  heroDesc: { fontSize: 14, color: 'rgba(255,255,255,0.8)', lineHeight: 20, marginTop: 4 },
+  heroSource: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 4, lineHeight: 16 },
 
   // 2-column grid (web ≥860px)
   bodyGrid: {
