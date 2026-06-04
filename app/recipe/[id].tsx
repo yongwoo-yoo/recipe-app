@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, StyleSheet, Platform, Image, Pressable, useWindowDimensions, Alert } from 'react-native';
+import { ScrollView, View, StyleSheet, Platform, Image, Pressable, useWindowDimensions, Alert, TextInput } from 'react-native';
 import { Text, Button, useTheme } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
@@ -13,9 +13,13 @@ export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const getRecipeById = useRecipeStore((s) => s.getRecipeById);
   const deleteRecipe = useRecipeStore((s) => s.deleteRecipe);
+  const addHistoryEntry = useRecipeStore((s) => s.addHistoryEntry);
+  const deleteHistoryEntry = useRecipeStore((s) => s.deleteHistoryEntry);
   const recipe = getRecipeById(id);
   const theme = useTheme();
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [historyNote, setHistoryNote] = useState('');
+  const [showHistoryInput, setShowHistoryInput] = useState(false);
 
   const handleDelete = () => {
     const doDelete = () => { deleteRecipe(id); router.push('/'); };
@@ -172,6 +176,58 @@ export default function RecipeDetailScreen() {
             ) : null}
           </View>
 
+        </View>
+
+        {/* ── 히스토리 ── */}
+        <View style={styles.historySection}>
+          <View style={styles.historyHeader}>
+            <Text style={styles.panelMono}>HISTORY</Text>
+            <Pressable onPress={() => setShowHistoryInput((v) => !v)} style={styles.historyAddBtn}>
+              <Text style={styles.historyAddTxt}>{showHistoryInput ? '취소' : '+ 기록 추가'}</Text>
+            </Pressable>
+          </View>
+
+          {showHistoryInput && (
+            <View style={styles.historyInputWrap}>
+              <TextInput
+                value={historyNote}
+                onChangeText={setHistoryNote}
+                placeholder={`원두, 그라인더, 클릭수, 추출 결과 등…`}
+                placeholderTextColor={appleColors.gray4}
+                multiline
+                style={styles.historyInput}
+              />
+              <Pressable
+                style={[styles.historySaveBtn, !historyNote.trim() && { opacity: 0.4 }]}
+                disabled={!historyNote.trim()}
+                onPress={() => {
+                  addHistoryEntry(id, historyNote.trim());
+                  setHistoryNote('');
+                  setShowHistoryInput(false);
+                }}
+              >
+                <Text style={styles.historySaveTxt}>저장</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {(recipe.history ?? []).length === 0 && !showHistoryInput && (
+            <Text style={styles.historyEmpty}>아직 기록이 없습니다. 추출 후 기록을 남겨보세요.</Text>
+          )}
+
+          {(recipe.history ?? []).map((entry) => (
+            <View key={entry.id} style={styles.historyEntry}>
+              <View style={styles.historyEntryTop}>
+                <Text style={styles.historyDate}>
+                  {new Date(entry.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                <Pressable onPress={() => deleteHistoryEntry(id, entry.id)} hitSlop={8}>
+                  <Text style={styles.historyDel}>✕</Text>
+                </Pressable>
+              </View>
+              <Text style={styles.historyNote}>{entry.note}</Text>
+            </View>
+          ))}
         </View>
 
         {/* ── 편집 / 삭제 액션 ── */}
@@ -350,6 +406,57 @@ const styles = StyleSheet.create({
 
   // Notes
   notes: { fontSize: 15, lineHeight: 22, padding: 20, paddingTop: 4 },
+
+  // History
+  historySection: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 18,
+    backgroundColor: appleColors.white,
+    borderWidth: 1,
+    borderColor: appleColors.gray5,
+    overflow: 'hidden',
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  historyAddBtn: { paddingVertical: 4, paddingHorizontal: 2 },
+  historyAddTxt: { fontSize: 13, fontWeight: '600', color: appleColors.accent },
+  historyInputWrap: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  historyInput: {
+    borderWidth: 1.5,
+    borderColor: appleColors.gray4,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: appleColors.gray1,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  historySaveBtn: {
+    backgroundColor: appleColors.gray1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  historySaveTxt: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  historyEmpty: { fontSize: 13, color: appleColors.gray3, paddingHorizontal: 20, paddingBottom: 16, lineHeight: 18 },
+  historyEntry: {
+    borderTopWidth: 1,
+    borderTopColor: appleColors.gray5,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 6,
+  },
+  historyEntryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  historyDate: { fontSize: 11, color: appleColors.gray3, fontWeight: '600' },
+  historyDel: { fontSize: 13, color: appleColors.gray4 },
+  historyNote: { fontSize: 14, color: appleColors.gray1, lineHeight: 20 },
 
   // Action bar
   actionBar: {

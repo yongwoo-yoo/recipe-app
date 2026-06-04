@@ -33,6 +33,31 @@ export const useRecipeStore = create<RecipeState>()(
       },
 
       getRecipeById: (id) => get().recipes.find((r) => r.id === id),
+
+      addHistoryEntry: (recipeId, note) => {
+        const entry = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          date: new Date().toISOString(),
+          note,
+        };
+        set((state) => ({
+          recipes: state.recipes.map((r) =>
+            r.id === recipeId
+              ? { ...r, history: [entry, ...(r.history ?? [])], updatedAt: new Date().toISOString() }
+              : r
+          ),
+        }));
+      },
+
+      deleteHistoryEntry: (recipeId, entryId) => {
+        set((state) => ({
+          recipes: state.recipes.map((r) =>
+            r.id === recipeId
+              ? { ...r, history: (r.history ?? []).filter((e) => e.id !== entryId) }
+              : r
+          ),
+        }));
+      },
     }),
     {
       name: STORAGE_KEYS.RECIPES,

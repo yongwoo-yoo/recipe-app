@@ -98,12 +98,6 @@ export function TotalTimer({ recipe }: Props) {
       <View style={styles.container}>
         <Text style={styles.label}>⏱ 전체 타이머 <Text style={styles.labelSub}>(최대 10분)</Text></Text>
         <View style={styles.presets}>
-          {stepTotal > 0 && (
-            <Pressable style={styles.presetBtn} onPress={() => start(stepTotal)}>
-              <Text style={styles.presetSub}>단계 합계</Text>
-              <Text style={styles.presetVal}>{formatTime(stepTotal)}</Text>
-            </Pressable>
-          )}
           {[3, 5, 7, 10].map((m) => (
             <Pressable key={m} style={styles.presetBtn} onPress={() => start(m * 60)}>
               <Text style={styles.presetVal}>{m}분</Text>

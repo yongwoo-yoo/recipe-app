@@ -33,6 +33,12 @@ export interface RecipeStep {
   timer?: TimerConfig;
 }
 
+export interface RecipeHistoryEntry {
+  id: string;
+  date: string;       // ISO string
+  note: string;       // 자유 텍스트 (원두, 그라인더, 클릭수, 결과 등)
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -45,6 +51,7 @@ export interface Recipe {
   notes?: string;
   imageUri?: string;
   brewingTool?: string;
+  history?: RecipeHistoryEntry[];
   createdAt: string;
   updatedAt: string;
 }
@@ -68,6 +75,8 @@ export interface RecipeState {
   updateRecipe: (id: string, updates: Partial<Omit<Recipe, 'id' | 'createdAt'>>) => void;
   deleteRecipe: (id: string) => void;
   getRecipeById: (id: string) => Recipe | undefined;
+  addHistoryEntry: (recipeId: string, note: string) => void;
+  deleteHistoryEntry: (recipeId: string, entryId: string) => void;
 }
 
 export interface TimerState {
