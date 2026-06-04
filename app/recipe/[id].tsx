@@ -325,6 +325,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 24,
+    paddingTop: 48,
     paddingBottom: 28,
     gap: 8,
   },
